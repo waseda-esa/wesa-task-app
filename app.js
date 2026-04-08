@@ -653,7 +653,7 @@ function updateListHeader(tasks) {
   } else if (currentView === "category") {
     title.textContent = myTasksOnly ? `${currentUser}のタスク・カテゴリ別` : "カテゴリ別";
   } else {
-    title.textContent = myTasksOnly ? `${currentUser}のHelp needed` : "Help needed";
+    title.textContent = myTasksOnly ? `${currentUser}の助けが必要なタスク` : "助けが必要なタスク";
   }
 
   const activeTasks = tasks.filter(t => t.status !== "完了");
