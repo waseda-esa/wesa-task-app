@@ -175,10 +175,10 @@ body {
 .ios-track::after {
   content: '';
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 27px;
-  height: 27px;
+  top: 3px;
+  left: 3px;
+  width: 25px;
+  height: 25px;
   background: #fff;
   border-radius: 50%;
   transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
