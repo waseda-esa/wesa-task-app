@@ -1138,3 +1138,20 @@ details[open] .done-summary::after {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+@media (max-width: 599px) {
+  .my-task-row {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 10px;
+  }
+
+  .my-task-label {
+    white-space: nowrap;
+    font-size: 15px;
+  }
+
+  .user-select-wrap {
+    margin-left: auto;
+  }
+}
