@@ -922,7 +922,7 @@ function createTaskCard(task) {
           <option value="完了" ${task.status === "完了" ? "selected" : ""}>完了</option>
         </select>
         ${isDone ? "" : '<button type="button" class="action-btn btn-complete">完了にする</button>'}
-        <button type="button" class="action-btn btn-help ${helpNeeded ? "is-active" : ""}">${helpNeeded ? "助け不要にする" : "助けを求める"}</button>
+        <button type="button" class="action-btn btn-help ${helpNeeded ? "is-active" : ""}">${helpNeeded ? "助けを不要にする" : "助けを求める"}</button>
         <button type="button" class="action-btn btn-edit">編集</button>
         <button type="button" class="action-btn btn-delete">削除</button>
       </div>
