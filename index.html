@@ -28,6 +28,8 @@
             <div class="account-menu-divider"></div>
             <div class="account-menu-label">アカウントを変更</div>
             <div id="accountUserList" class="account-user-list"></div>
+            <div class="account-menu-divider"></div>
+            <button type="button" id="openCategoryManagerBtn" class="account-menu-action">カテゴリ管理</button>
           </div>
         </div>
       </div>
@@ -49,6 +51,16 @@
               <span class="ios-track"></span>
             </span>
             自分のみ
+          </label>
+        </div>
+
+        <div class="my-task-row">
+          <label class="compact-toggle-label" for="compactModeToggle">
+            <span class="ios-toggle">
+              <input type="checkbox" id="compactModeToggle">
+              <span class="ios-track"></span>
+            </span>
+            簡易表示
           </label>
         </div>
       </div>
@@ -84,14 +96,12 @@
 
           <div class="field-group">
             <label class="field-label" for="categorySelect">カテゴリ</label>
-            <select class="field-select" id="categorySelect">
-              <option value="">未分類</option>
-            </select>
-          </div>
-
-          <div class="field-group" id="customCategoryGroup" style="display:none;">
-            <label class="field-label" for="customCategory">新しいカテゴリ</label>
-            <input class="field-input" type="text" id="customCategory" placeholder="例：新歓">
+            <div class="category-field-row">
+              <select class="field-select" id="categorySelect">
+                <option value="">未分類</option>
+              </select>
+              <button type="button" id="openCategoryManagerInlineBtn" class="field-inline-btn">編集</button>
+            </div>
           </div>
 
           <div class="field-group">
@@ -153,10 +163,34 @@
     </div>
   </div>
 
+  <div id="categoryManagerOverlay" class="form-overlay">
+    <div class="form-panel category-manager-panel">
+      <div class="form-header">
+        <h2>カテゴリ管理</h2>
+        <button type="button" id="closeCategoryManagerBtn" class="close-btn">閉じる</button>
+      </div>
+
+      <div class="form-body">
+        <div class="field-group">
+          <label class="field-label" for="newCategoryName">新しいカテゴリを追加</label>
+          <div class="category-manager-create">
+            <input class="field-input" type="text" id="newCategoryName" placeholder="例：新歓">
+            <button type="button" id="createCategoryBtn" class="field-inline-btn primary">追加</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">登録済みカテゴリ</label>
+          <div id="categoryManagerList" class="category-manager-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="loginOverlay" class="login-overlay">
     <div class="login-card">
-      <h2 class="login-title">名前を選択してください</h2>
-      <p class="login-text">次回からは自動でログインされます</p>
+      <h2 class="login-title">最初にあなたを選んでください</h2>
+      <p class="login-text">一度選べば、この端末では自分のみ表示と担当者選択が自動で楽になります。</p>
       <div class="login-select-row">
         <span class="login-select-text">私は</span>
         <select id="loginUserSelect" class="login-select" aria-label="ログインする名前">
@@ -175,6 +209,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-
-
