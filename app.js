@@ -677,6 +677,8 @@ function renderTasks() {
 }
 
 function loadTasks() {
+  showLoading("タスクを読み込み中...");
+
   fetch(API_URL)
     .then(r => r.json())
     .then(data => {
@@ -687,7 +689,8 @@ function loadTasks() {
     .catch(e => {
       console.error(e);
       document.getElementById("taskList").innerHTML = '<p class="empty-text">タスクの読み込みに失敗しました</p>';
-    });
+    })
+    .finally(hideLoading);
 }
 
 document.getElementById("openTaskFormBtn").addEventListener("click", openCreateTaskForm);
