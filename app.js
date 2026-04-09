@@ -590,6 +590,7 @@ function createCompactTaskRow(task) {
   const row = document.createElement("div");
   const dlClass = getDeadlineClass(task);
   const helpNeeded = isHelpNeeded(task);
+  const assignees = normalizeAssignees(task);
 
   row.className = [
     "compact-task-row",
@@ -602,6 +603,7 @@ function createCompactTaskRow(task) {
   const metaParts = [];
 
   if (task.category) metaParts.push(task.category);
+  if (assignees.length) metaParts.push(`担当: ${assignees.join("、")}`);
   if (task.status) metaParts.push(task.status);
   if (deadlineText) metaParts.push(deadlineText);
   if (helpNeeded) metaParts.push("助けが必要");
@@ -922,7 +924,7 @@ function createTaskCard(task) {
           <option value="完了" ${task.status === "完了" ? "selected" : ""}>完了</option>
         </select>
         ${isDone ? "" : '<button type="button" class="action-btn btn-complete">完了にする</button>'}
-        <button type="button" class="action-btn btn-help ${helpNeeded ? "is-active" : ""}">${helpNeeded ? "助けを不要にする" : "助けを求める"}</button>
+        <button type="button" class="action-btn btn-help ${helpNeeded ? "is-active" : ""}">${helpNeeded ? "助け不要にする" : "助けを求める"}</button>
         <button type="button" class="action-btn btn-edit">編集</button>
         <button type="button" class="action-btn btn-delete">削除</button>
       </div>

@@ -957,7 +957,7 @@ details[open] > .status-section-content {
 
 .compact-task-row.help-needed .compact-edit-btn {
   background: rgba(255,255,255,0.86);
-  color: #b00000;
+  color: var(--blue);
 }
 
 .compact-task-row.help-needed .compact-complete-btn {
