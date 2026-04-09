@@ -1,11 +1,13 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbziAjrHZklvMsdvWY82V1_FE11OZPMRW2H3WR02-ESqpcio3ANBCp4poMBEvqNY6E4B/exec";
+﻿const API_URL = "https://script.google.com/macros/s/AKfycbziAjrHZklvMsdvWY82V1_FE11OZPMRW2H3WR02-ESqpcio3ANBCp4poMBEvqNY6E4B/exec";
 const MEMBERS = ["あっす", "しょうぺい", "よる", "うのりか", "たむたむ"];
 const DEFAULT_CATEGORIES = ["ディベート", "ディスカッション", "スピーチ", "レッスン", "新歓", "協賛", "その他"];
+const USER_STORAGE_KEY = "wesa_taskmgmt_current_user";
 
 let currentView = "member";
 let allTasks = [];
 let myTasksOnly = false;
 let currentUser = MEMBERS[0];
+let hasLoadedTasks = false;
 
 function escapeHtml(v) {
   return String(v || "")
@@ -16,6 +18,117 @@ function escapeHtml(v) {
     .replaceAll("'", "&#039;");
 }
 
+function getStoredUser() {
+  try {
+    const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+    return MEMBERS.includes(storedUser) ? storedUser : "";
+  } catch (error) {
+    console.error(error);
+    return "";
+  }
+}
+
+function persistCurrentUser(user) {
+  try {
+    localStorage.setItem(USER_STORAGE_KEY, user);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function updateCurrentUserSelects() {
+  const currentUserSelect = document.getElementById("currentUserSelect");
+  const loginUserSelect = document.getElementById("loginUserSelect");
+  const accountButtonName = document.getElementById("accountButtonName");
+  const accountCurrentName = document.getElementById("accountCurrentName");
+
+  if (currentUserSelect) currentUserSelect.value = currentUser;
+  if (loginUserSelect) loginUserSelect.value = currentUser;
+  if (accountButtonName) accountButtonName.textContent = currentUser;
+  if (accountCurrentName) accountCurrentName.textContent = currentUser;
+}
+
+function setDefaultAssigneeForCreate() {
+  if (document.getElementById("editingTaskId").value) return;
+
+  document.querySelectorAll('input[name="assignee"]').forEach(el => {
+    el.checked = el.value === currentUser;
+  });
+}
+
+function setCurrentUser(user, options = {}) {
+  const { persist = true, rerender = true } = options;
+  currentUser = MEMBERS.includes(user) ? user : MEMBERS[0];
+  updateCurrentUserSelects();
+  setDefaultAssigneeForCreate();
+
+  if (persist) {
+    persistCurrentUser(currentUser);
+  }
+
+  if (rerender && hasLoadedTasks) {
+    renderTasks();
+  }
+}
+
+function showLoginOverlay() {
+  document.getElementById("loginOverlay").classList.add("is-open");
+  document.body.classList.add("login-open");
+}
+
+function hideLoginOverlay() {
+  document.getElementById("loginOverlay").classList.remove("is-open");
+  document.body.classList.remove("login-open");
+}
+
+function renderAccountUserList() {
+  const list = document.getElementById("accountUserList");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  MEMBERS.forEach(user => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `account-user-item${user === currentUser ? " is-current" : ""}`;
+    button.textContent = user;
+    button.addEventListener("click", () => {
+      setCurrentUser(user);
+      closeAccountMenu();
+    });
+    list.appendChild(button);
+  });
+}
+
+function openAccountMenu() {
+  const menu = document.getElementById("accountMenuPanel");
+  const button = document.getElementById("accountMenuBtn");
+  if (!menu || !button) return;
+
+  renderAccountUserList();
+  menu.classList.add("is-open");
+  button.setAttribute("aria-expanded", "true");
+}
+
+function closeAccountMenu() {
+  const menu = document.getElementById("accountMenuPanel");
+  const button = document.getElementById("accountMenuBtn");
+  if (!menu || !button) return;
+
+  menu.classList.remove("is-open");
+  button.setAttribute("aria-expanded", "false");
+}
+
+function toggleAccountMenu() {
+  const menu = document.getElementById("accountMenuPanel");
+  if (!menu) return;
+
+  if (menu.classList.contains("is-open")) {
+    closeAccountMenu();
+  } else {
+    openAccountMenu();
+  }
+}
 function formatDate(d) {
   if (!d) return "期限なし";
   const dt = new Date(d);
@@ -184,21 +297,6 @@ function getStatusCounts(tasks) {
   };
 }
 
-function createGroupStatusSummary(tasks) {
-  const counts = getStatusCounts(tasks);
-
-  const summary = document.createElement("div");
-  summary.className = "group-status-summary";
-
-  summary.innerHTML = `
-    <span class="summary-chip todo">未着手 ${counts.todo}件</span>
-    <span class="summary-chip progress">進行中 ${counts.progress}件</span>
-    <span class="summary-chip done">完了 ${counts.done}件</span>
-  `;
-
-  return summary;
-}
-
 function getGroupStatusSummaryHtml(tasks) {
   const counts = getStatusCounts(tasks);
 
@@ -311,25 +409,17 @@ function createStatusDetails(label, tasks, className, isOpen) {
 }
 
 function renderStatusSections(parent, tasks) {
-  const progressTasks = sortTasksForDisplay(
-    tasks.filter(t => t.status === "進行中")
-  );
-
-  const todoTasks = sortTasksForDisplay(
-    tasks.filter(t => t.status === "未着手")
-  );
-
-  const doneTasks = sortTasksForDisplay(
-    tasks.filter(t => t.status === "完了")
-  );
+  const progressTasks = sortTasksForDisplay(tasks.filter(t => t.status === "進行中"));
+  const todoTasks = sortTasksForDisplay(tasks.filter(t => t.status === "未着手"));
+  const doneTasks = sortTasksForDisplay(tasks.filter(t => t.status === "完了"));
 
   parent.appendChild(createStatusDetails("進行中", progressTasks, "progress-section", true));
   parent.appendChild(createStatusDetails("未着手", todoTasks, "todo-section", true));
   parent.appendChild(createStatusDetails("完了", doneTasks, "done-section", false));
 }
 
-function showLoading(t) {
-  document.getElementById("loadingText").textContent = t || "処理中...";
+function showLoading(text) {
+  document.getElementById("loadingText").textContent = text || "処理中...";
   document.getElementById("loadingOverlay").classList.add("is-open");
 }
 
@@ -344,6 +434,7 @@ function resetTaskForm() {
   document.getElementById("submitTaskBtn").textContent = "追加";
   document.getElementById("createOnlyFields").style.display = "block";
   populateCategorySelect("");
+  setDefaultAssigneeForCreate();
 }
 
 function openCreateTaskForm() {
@@ -400,8 +491,8 @@ function updateTaskStatus(taskId, newStatus) {
         loadTasks();
       }
     })
-    .catch(e => {
-      console.error(e);
+    .catch(error => {
+      console.error(error);
       alert("ステータス更新に失敗しました");
       loadTasks();
     })
@@ -416,9 +507,9 @@ function toggleTaskHelp(taskId) {
   let helpComment = task.help_comment || "";
 
   if (next) {
-    const inp = prompt("助けてほしい内容を書いてください", helpComment);
-    if (inp === null) return;
-    helpComment = inp;
+    const input = prompt("助けてほしい内容を書いてください", helpComment);
+    if (input === null) return;
+    helpComment = input;
   } else {
     helpComment = "";
   }
@@ -443,8 +534,8 @@ function toggleTaskHelp(taskId) {
         loadTasks();
       }
     })
-    .catch(e => {
-      console.error(e);
+    .catch(error => {
+      console.error(error);
       alert("更新に失敗しました");
       loadTasks();
     })
@@ -471,8 +562,8 @@ function deleteTask(taskId) {
         loadTasks();
       }
     })
-    .catch(e => {
-      console.error(e);
+    .catch(error => {
+      console.error(error);
       alert("削除に失敗しました");
       loadTasks();
     })
@@ -496,7 +587,7 @@ function createTaskCard(task) {
 
   const deadlineChipHtml = task.deadline
     ? `<span class="deadline-chip ${dlClass}">${escapeHtml(formatDate(task.deadline))}</span>`
-    : `<span class="deadline-chip">期限なし</span>`;
+    : '<span class="deadline-chip">期限なし</span>';
 
   div.innerHTML = `
     <div class="task-card-inner">
@@ -524,7 +615,7 @@ function createTaskCard(task) {
     </div>
   `;
 
-  div.querySelector(".status-select").addEventListener("change", function() {
+  div.querySelector(".status-select").addEventListener("change", function () {
     updateTaskStatus(task.id, this.value);
   });
 
@@ -543,13 +634,13 @@ function renderMemberView(tasks) {
   const displayMembers = myTasksOnly ? [currentUser] : MEMBERS;
   const grouped = {};
 
-  displayMembers.forEach(m => {
-    grouped[m] = [];
+  displayMembers.forEach(member => {
+    grouped[member] = [];
   });
 
-  tasks.forEach(t => {
-    normalizeAssignees(t).forEach(u => {
-      if (displayMembers.includes(u)) grouped[u].push(t);
+  tasks.forEach(task => {
+    normalizeAssignees(task).forEach(user => {
+      if (displayMembers.includes(user)) grouped[user].push(task);
     });
   });
 
@@ -566,7 +657,6 @@ function renderMemberView(tasks) {
     gb.appendChild(h);
 
     renderStatusSections(gb, grouped[user]);
-
     c.appendChild(gb);
   });
 }
@@ -583,32 +673,25 @@ function renderCategoryView(tasks) {
 
   const grouped = {};
 
-  tasks.forEach(t => {
-    const cat = t.category && String(t.category).trim() !== "" ? t.category : "未分類";
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push(t);
+  tasks.forEach(task => {
+    const category = task.category && String(task.category).trim() !== "" ? task.category : "未分類";
+    if (!grouped[category]) grouped[category] = [];
+    grouped[category].push(task);
   });
 
-  const cats = Object.keys(grouped).sort();
-
-  if (!cats.length) {
-    c.innerHTML = '<p class="empty-text">タスクはありません</p>';
-    return;
-  }
-
-  cats.forEach(cat => {
+  Object.keys(grouped).sort().forEach(category => {
     const gb = document.createElement("div");
     gb.className = "group-block";
 
     const h = document.createElement("h3");
     h.className = "group-title";
     h.innerHTML = `
-      <span class="group-title-text">${escapeHtml(cat)}</span>
-      <span class="group-title-summary ${getGroupCountClass(grouped[cat])}">${getGroupStatusSummaryHtml(grouped[cat])}</span>
+      <span class="group-title-text">${escapeHtml(category)}</span>
+      <span class="group-title-summary ${getGroupCountClass(grouped[category])}">${getGroupStatusSummaryHtml(grouped[category])}</span>
     `;
     gb.appendChild(h);
 
-    renderStatusSections(gb, grouped[cat]);
+    renderStatusSections(gb, grouped[category]);
     c.appendChild(gb);
   });
 }
@@ -656,13 +739,12 @@ function updateListHeader(tasks) {
     title.textContent = myTasksOnly ? `${currentUser}の助けが必要なタスク` : "助けが必要なタスク";
   }
 
-  const activeTasks = tasks.filter(t => t.status !== "完了");
+  const activeTasks = tasks.filter(task => task.status !== "完了");
   count.textContent = `${activeTasks.length}件`;
 }
 
 function renderTasks() {
   const tasks = getFilteredTasks();
-
   updateListHeader(tasks);
 
   if (currentView === "member") {
@@ -683,22 +765,53 @@ function loadTasks() {
     .then(r => r.json())
     .then(data => {
       allTasks = Array.isArray(data) ? data : [];
+      hasLoadedTasks = true;
       populateCategorySelect("");
       renderTasks();
     })
-    .catch(e => {
-      console.error(e);
+    .catch(error => {
+      console.error(error);
       document.getElementById("taskList").innerHTML = '<p class="empty-text">タスクの読み込みに失敗しました</p>';
     })
     .finally(hideLoading);
+}
+
+function initializeApp() {
+  const storedUser = getStoredUser();
+
+  if (storedUser) {
+    setCurrentUser(storedUser, { persist: false, rerender: false });
+    hideLoginOverlay();
+    loadTasks();
+    return;
+  }
+
+  setCurrentUser(MEMBERS[0], { persist: false, rerender: false });
+  showLoginOverlay();
 }
 
 document.getElementById("openTaskFormBtn").addEventListener("click", openCreateTaskForm);
 document.getElementById("closeTaskFormBtn").addEventListener("click", closeTaskForm);
 document.getElementById("categorySelect").addEventListener("change", updateCustomCategoryVisibility);
 
-document.getElementById("taskFormOverlay").addEventListener("click", e => {
-  if (e.target === e.currentTarget) closeTaskForm();
+document.getElementById("taskFormOverlay").addEventListener("click", event => {
+  if (event.target === event.currentTarget) closeTaskForm();
+});
+
+document.getElementById("accountMenuBtn").addEventListener("click", event => {
+  event.stopPropagation();
+  toggleAccountMenu();
+});
+
+document.getElementById("accountMenuPanel").addEventListener("click", event => {
+  event.stopPropagation();
+});
+
+document.addEventListener("click", event => {
+  const accountMenuWrap = document.querySelector(".account-menu-wrap");
+  if (accountMenuWrap && !accountMenuWrap.contains(event.target)) {
+    closeAccountMenu();
+  }
 });
 
 document.getElementById("memberViewBtn").addEventListener("click", () => {
@@ -716,22 +829,24 @@ document.getElementById("helpViewBtn").addEventListener("click", () => {
   renderTasks();
 });
 
-document.getElementById("myTasksOnlyFilter").addEventListener("change", function() {
+document.getElementById("myTasksOnlyFilter").addEventListener("change", function () {
   myTasksOnly = this.checked;
   renderTasks();
 });
 
-document.getElementById("currentUserSelect").addEventListener("change", function() {
-  currentUser = this.value;
-  renderTasks();
+document.getElementById("loginConfirmBtn").addEventListener("click", () => {
+  setCurrentUser(document.getElementById("loginUserSelect").value, { persist: true, rerender: false });
+  hideLoginOverlay();
+  loadTasks();
 });
 
-document.getElementById("taskForm").addEventListener("submit", function(e) {
+document.getElementById("taskForm").addEventListener("submit", function (e) {
   e.preventDefault();
 
   const editId = document.getElementById("editingTaskId").value;
   const isEditing = editId !== "";
-  const assignees = Array.from(document.querySelectorAll('input[name="assignee"]:checked')).map(el => el.value);
+  const selectedAssignees = Array.from(document.querySelectorAll('input[name="assignee"]:checked')).map(el => el.value);
+  const assignees = selectedAssignees.length > 0 ? selectedAssignees : [currentUser];
 
   const p = new URLSearchParams();
   p.append("mode", isEditing ? "updateTask" : "create");
@@ -759,15 +874,15 @@ document.getElementById("taskForm").addEventListener("submit", function(e) {
       }
 
       if (isEditing) {
-        const t = allTasks.find(i => String(i.id) === String(editId));
+        const task = allTasks.find(item => String(item.id) === String(editId));
 
-        if (t && res.task) {
-          t.title = res.task.title;
-          t.category = res.task.category;
-          t.deadline = res.task.deadline;
-          t.memo = res.task.memo;
-          t.assignees = res.task.assignees;
-          t.updated_at = res.task.updated_at;
+        if (task && res.task) {
+          task.title = res.task.title;
+          task.category = res.task.category;
+          task.deadline = res.task.deadline;
+          task.memo = res.task.memo;
+          task.assignees = res.task.assignees;
+          task.updated_at = res.task.updated_at;
         } else {
           loadTasks();
         }
@@ -782,11 +897,14 @@ document.getElementById("taskForm").addEventListener("submit", function(e) {
       closeTaskForm();
       resetTaskForm();
     })
-    .catch(e => {
-      console.error(e);
+    .catch(error => {
+      console.error(error);
       alert(isEditing ? "保存に失敗しました" : "追加に失敗しました");
     })
     .finally(hideLoading);
 });
 
-loadTasks();
+initializeApp();
+
+
+

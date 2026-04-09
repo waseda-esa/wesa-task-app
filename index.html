@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -9,7 +9,28 @@
 <body>
   <div class="app-header">
     <div class="header-inner">
-      <h1 class="app-title">5役タスク</h1>
+      <div class="header-top">
+        <h1 class="app-title">5役タスク</h1>
+        <div class="account-menu-wrap">
+          <button type="button" id="accountMenuBtn" class="account-menu-btn" aria-expanded="false" aria-controls="accountMenuPanel">
+            <span class="account-menu-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" class="account-menu-icon-svg">
+                <circle cx="12" cy="12" r="9"></circle>
+                <circle cx="12" cy="9" r="3.2"></circle>
+                <path d="M7.6 17.6c1.1-2.2 3-3.4 4.4-3.4s3.3 1.2 4.4 3.4"></path>
+              </svg>
+            </span>
+            <span id="accountButtonName" class="account-menu-name">あっす</span>
+          </button>
+          <div id="accountMenuPanel" class="account-menu-panel">
+            <div class="account-menu-label">ログイン中</div>
+            <div id="accountCurrentName" class="account-current-name">あっす</div>
+            <div class="account-menu-divider"></div>
+            <div class="account-menu-label">アカウントを変更</div>
+            <div id="accountUserList" class="account-user-list"></div>
+          </div>
+        </div>
+      </div>
       <div class="tab-bar">
         <button type="button" id="memberViewBtn" class="tab-button active-view">メンバー別</button>
         <button type="button" id="categoryViewBtn" class="tab-button">カテゴリ別</button>
@@ -29,18 +50,6 @@
             </span>
             自分のみ
           </label>
-
-          <div class="user-select-wrap">
-            <span class="user-select-prefix">私は</span>
-            <select id="currentUserSelect" aria-label="自分の名前">
-              <option value="あっす">あっす</option>
-              <option value="しょうぺい">しょうぺい</option>
-              <option value="よる">よる</option>
-              <option value="うのりか">うのりか</option>
-              <option value="たむたむ">たむたむ</option>
-            </select>
-            <span class="user-select-suffix">です</span>
-          </div>
         </div>
       </div>
     </div>
@@ -144,6 +153,28 @@
     </div>
   </div>
 
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <h2 class="login-title">最初にあなたを選んでください</h2>
+      <p class="login-text">一度選べば、この端末では自分のみ表示と担当者選択が自動で楽になります。</p>
+      <div class="login-select-row">
+        <span class="login-select-text">私は</span>
+        <select id="loginUserSelect" class="login-select" aria-label="ログインする名前">
+          <option value="あっす">あっす</option>
+          <option value="しょうぺい">しょうぺい</option>
+          <option value="よる">よる</option>
+          <option value="うのりか">うのりか</option>
+          <option value="たむたむ">たむたむ</option>
+        </select>
+        <span class="login-select-text">です</span>
+      </div>
+      <button type="button" id="loginConfirmBtn" class="login-confirm-btn">はじめる</button>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
+
+
+
