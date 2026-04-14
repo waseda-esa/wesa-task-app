@@ -793,6 +793,7 @@ function updateTaskStatus(taskId, newStatus) {
   p.append("mode", "updateStatus");
   p.append("task_id", taskId);
   p.append("status", newStatus);
+  p.append("actor_username", currentUser);
 
   fetch(API_URL, { method: "POST", body: p })
     .then(r => r.json())
@@ -836,6 +837,7 @@ function toggleTaskHelp(taskId) {
   p.append("task_id", taskId);
   p.append("need_help", next);
   p.append("help_comment", helpComment);
+  p.append("actor_username", currentUser);
 
   fetch(API_URL, { method: "POST", body: p })
     .then(r => r.json())
@@ -1091,10 +1093,12 @@ function renderTasks() {
   updateViewButtons();
 }
 
-function loadTasks() {
-  showLoading("タスクを読み込み中...");
+function loadTasks(showLoader = true) {
+  if (showLoader) {
+    showLoading("タスクを読み込み中...");
+  }
 
-  Promise.all([
+  return Promise.all([
     fetchJson(API_URL),
     loadCategories()
   ])
@@ -1107,7 +1111,11 @@ function loadTasks() {
       console.error(error);
       document.getElementById("taskList").innerHTML = '<p class="empty-text">タスクの読み込みに失敗しました</p>';
     })
-    .finally(hideLoading);
+    .finally(() => {
+      if (showLoader) {
+        hideLoading();
+      }
+    });
 }
 
 function initializeApp() {
@@ -1220,6 +1228,7 @@ document.getElementById("taskForm").addEventListener("submit", function (e) {
       p.append("deadline", document.getElementById("deadline").value);
       p.append("memo", document.getElementById("memo").value);
       p.append("assignees", assignees.join(","));
+      p.append("actor_username", currentUser);
 
       if (!isEditing) {
         p.append("status", statusValue);
@@ -1232,35 +1241,30 @@ document.getElementById("taskForm").addEventListener("submit", function (e) {
     .then(r => r.json())
     .then(res => {
       if (!res.success) {
-        alert(isEditing ? "保存に失敗しました" : "追加に失敗しました");
-        return;
+        const failureMessage = (isEditing ? "保存に失敗しました" : "追加に失敗しました") + (res.message ? `\n${res.message}` : "");
+        return loadTasks(false)
+          .catch(error => {
+            console.error(error);
+          })
+          .then(() => {
+            alert(failureMessage);
+            return null;
+          });
       }
 
       if (isEditing) {
-        const task = allTasks.find(item => String(item.id) === String(editId));
-
-        if (task && res.task) {
-          task.title = res.task.title;
-          task.category = res.task.category;
-          task.deadline = res.task.deadline;
-          task.memo = res.task.memo;
-          task.assignees = res.task.assignees;
-          task.updated_at = res.task.updated_at;
-          task.status = statusValue;
-          task.need_help = needHelpValue;
-          task.help_comment = helpCommentValue;
-        }
-
         const statusParams = new URLSearchParams();
         statusParams.append("mode", "updateStatus");
         statusParams.append("task_id", editId);
         statusParams.append("status", statusValue);
+        statusParams.append("actor_username", currentUser);
 
         const helpParams = new URLSearchParams();
         helpParams.append("mode", "updateHelp");
         helpParams.append("task_id", editId);
         helpParams.append("need_help", needHelpValue);
         helpParams.append("help_comment", helpCommentValue);
+        helpParams.append("actor_username", currentUser);
 
         return Promise.all([
           postToApi(statusParams),
@@ -1269,27 +1273,26 @@ document.getElementById("taskForm").addEventListener("submit", function (e) {
           if (!statusRes.success || !helpRes.success) {
             throw new Error("追加更新に失敗しました");
           }
-          populateCategorySelect("");
-          renderTasks();
-          closeTaskForm();
-          resetTaskForm();
-          return null;
+
+          return loadTasks(false).then(() => {
+            populateCategorySelect("");
+            closeTaskForm();
+            resetTaskForm();
+            return null;
+          });
         });
       }
 
-      if (res.task) {
-        allTasks.push(res.task);
-      }
-
-      populateCategorySelect("");
-      renderTasks();
-      closeTaskForm();
-      resetTaskForm();
-      return null;
+      return loadTasks(false).then(() => {
+        populateCategorySelect("");
+        closeTaskForm();
+        resetTaskForm();
+        return null;
+      });
     })
     .catch(error => {
       console.error(error);
-      alert(isEditing ? "保存に失敗しました" : "追加に失敗しました");
+      alert((isEditing ? "保存に失敗しました" : "追加に失敗しました") + (error && error.message ? `\n${error.message}` : ""));
     })
     .finally(hideLoading);
 });
